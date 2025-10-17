@@ -271,14 +271,15 @@ def get_system_info():
         'downtime_threshold': f"{Config.DOWNTIME_THRESHOLD} секунд",
         'polling_interval': f"{Config.POLLING_INTERVAL} секунд"
     })
+        'oee_data': {
+            'oee_percentage': 78.5,
+            'availability': 85.0,
+            'performance': 92.1,
+            'quality': 98.0
+        }
+    })
 
-@app.route('/api/test_data')
-def test_data():
-    """Тестовые данные для отладки"""
-    return jsonify({
-        'production_data': {
-            'ivams_total': 2265349,
-            'hour_count': 37094,
+@app.route('/api/minute_power')   'hour_count': 37094,
             'aux_count': 1414,
             'success': True
         },
