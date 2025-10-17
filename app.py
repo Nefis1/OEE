@@ -287,20 +287,7 @@ def test_data():
             'availability': 85.0,
             'performance': 92.1,
             'quality': 98.0
-        },
-        'downtime_status': {
-            'is_downtime': False,
-            'info': None
-        },
-        'shift_info': {
-            'number': 1,
-            'start': '07:00:00',
-            'end': '19:00:00'
-        },
-        'last_update': datetime.now().isoformat()
-    })
-
-@app.route('/api/minute_power')
+  @app.route('/api/minute_power')
 def get_minute_power():
     """API для получения поминутной мощности за сегодня"""
     try:
@@ -309,6 +296,69 @@ def get_minute_power():
         return jsonify({
             'minute_power': minute_data,
             'current_hour': current_time.hour,
+            'current_minute': current_time.minute
+        })
+    except Exception as e:
+        print(f"Ошибка получения поминутной мощности: {e}")
+        return jsonify({
+            'minute_power': [[0] * 60 for _ in range(24)],
+            'current_hour': 0,
+            'current_minute': 0
+        })
+
+@app.route('/api/minute_power/<date>')
+def get_minute_power_by_date(date):
+    """API для получения поминутной мощности за конкретную дату"""
+    try:
+        minute_data = db.get_minute_power_by_date(date)
+        return jsonify({
+            'minute_power': minute_data,
+            'date': date,
+            'current_hour': 0,
+            'current_minute': 0
+        })
+    except Exception as e:
+        print(f"Ошибка получения поминутной мощности за {date}: {e}")
+        return jsonify({
+            'minute_power': [[0] * 60 for _ in range(24)],
+            'date': date,
+            'current_hour': 0,
+            'current_minute': 0
+        })
+
+@app.route('/api/available_dates')
+def get_available_dates():
+    """API для получения списка доступных дат с данными"""
+    try:
+        dates = db.get_available_dates()
+        return jsonify({
+            'dates': dates,
+            'count': len(dates)
+        })
+    except Exception as e:
+        print(f"Ошибка получения списка дат: {e}")
+        return jsonify({
+            'dates': [],
+            'count': 0
+        })
+
+@app.route('/api/hourly_power/<date>')
+def get_hourly_power_by_date(date):
+    """API для получения почасовой мощности за конкретную дату"""
+    try:
+        hourly_data = db.get_hourly_power_by_date(date)
+        return jsonify({
+            'hourly_power': hourly_data,
+            'date': date,
+            'current_hour': 0
+        })
+    except Exception as e:
+        print(f"Ошибка получения почасовой мощности за {date}: {e}")
+        return jsonify({
+            'hourly_power': [0] * 24,
+            'date': date,
+            'current_hour': 0
+        })our,
             'current_minute': current_time.minute
         })
     except Exception as e:
