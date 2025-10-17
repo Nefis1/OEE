@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система мониторинга OEE - {{ line_name }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #34495e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .header .subtitle {
+            color: var(--dark);
+            opacity: 0.8;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .kpi-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .kpi-label {
+            color: var(--dark);
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+
+        .oee-excellent {
+            color: var(--success);
+        }
+
+        .oee-good {
+            color: var(--warning);
+        }
+
+        .oee-poor {
+            color: var(--danger);
+        }
+
+        .production-value {
+            color: var(--secondary);
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .downtime-alert {
+            background: var(--danger);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            animation: alert-pulse 1s infinite;
+        }
+
+        @keyframes alert-pulse {
+            0% {
+                background: var(--danger);
+            }
+
+            50% {
+                background: #c0392b;
+            }
+
+            100% {
+                background: var(--danger);
+            }
+        }
+
+        .last-update {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            height: 400px;
+            /* Фиксированная высота */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            /* Заголовок не сжимается */
+        }
+
+        .chart-wrapper {
+            flex: 1;
+            /* Занимает все доступное пространство */
+            position: relative;
+            min-height: 300px;
+        }
+
+        /* Убедимся что графики responsive но не "уплывают" */
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+
+        /* Стили для карты суток */
+        .chart-header {
+            margin-bottom: 10px;
+        }
+
+        .time-legend {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            color: var(--dark);
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.8em;
+            color: var(--dark);
+        }
+
+        .gradient-bar {
+            flex: 1;
+            height: 10px;
+            margin: 0 10px;
+            background: linear-gradient(90deg, #2ecc71, #f1c40f, #e74c3c);
+            border-radius: 5px;
+        }
+
+        .current-power {
+            font-weight: bold;
+            color: var(--secondary);
+        }
+
+        /* Стили для самого графика */
+        .heatmap-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .heatmap-cell {
+            transition: all 0.3s ease;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        /* Стили для блока мощности */
+        .power-value {
+            color: #27ae60;
+            /* Зеленый по умолчанию */
+            transition: color 0.3s ease;
+        }
+
+        .power-value.high {
+            color: #27ae60;
+            /* Зеленый - высокая мощность */
+        }
+
+        .power-value.medium {
+            color: #f39c12;
+            /* Оранжевый - средняя мощность */
+        }
+
+        .power-value.low {
+            color: #e74c3c;
+            /* Красный - низкая мощность */
+        }
+
+        .power-value.idle {
+            color: #95a5a6;
+            /* Серый - простой */
+        }
+
+        /* Анимация для изменения мощности */
+        @keyframes powerPulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .power-changing {
+            animation: powerPulse 0.5s ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>Система мониторинга OEE</h1>
+                <div class="subtitle">{{ line_name }} • Целевой показатель: {{ target_rate }} шт/час</div>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Режим реального времени</span>
+            </div>
+        </div>
+
+        <!-- KPI Dashboard -->
+        <div class="dashboard">
+            <!-- OEE -->
+            <div class="card">
+                <h3>Общая эффективность оборудования (OEE)</h3>
+                <div class="kpi-value oee-excellent" id="oee-value">--%</div>
+                <div class="kpi-label">Целевой показатель: >85%</div>
+            </div>
+
+            <!-- Availability -->
+            <div class="card">
+                <h3>Доступность (Availability)</h3>
+                <div class="kpi-value" id="availability-value">--%</div>
+                <div class="kpi-label">Время работы оборудования</div>
+            </div>
+
+            <!-- Performance -->
+            <div class="card">
+                <h3>Производительность (Performance)</h3>
+                <div class="kpi-value" id="performance-value">--%</div>
+                <div class="kpi-label">Скорость производства</div>
+            </div>
+
+            <!-- Quality -->
+            <div class="card">
+                <h3>Качество (Quality)</h3>
+                <div class="kpi-value" id="quality-value">--%</div>
+                <div class="kpi-label">Доля годной продукции</div>
+            </div>
+
+            <!-- Production -->
+            <div class="card">
+                <h3>Текущее производство</h3>
+                <div class="kpi-value production-value" id="production-value">-- шт</div>
+                <div class="kpi-label">Всего произведено</div>
+            </div>
+
+            <!-- Shift Info -->
+            <div class="card">
+                <h3>Текущая смена</h3>
+                <div class="kpi-value" id="shift-value">--</div>
+                <div class="kpi-label" id="shift-time">--:-- - --:--</div>
+            </div>
+            <!-- Current Power -->
+            <div class="card">
+                <h3>Текущая мощность</h3>
+                <div class="kpi-value power-value" id="current-power-kpi">-- шт/мин</div>
+                <div class="kpi-label" id="power-status">Стабильная работа</div>
+            </div>
+        </div>
+
+        <!-- Charts and Additional Info -->
+        <div class="charts-row">
+            <!-- Карта суток - поминутные бары -->
+            <div class="chart-container">
+                <h3>Карта суток - поминутная мощность</h3>
+                <div class="chart-header">
+                    <div class="time-legend">
+                        <span>00:00</span>
+                        <span>06:00</span>
+                        <span>12:00</span>
+                        <span>18:00</span>
+                        <span>23:59</span>
+                    </div>
+                    <div class="zoom-controls">
+                        <button onclick="dashboard.zoomOut()">-</button>
+                        <span id="zoom-level">1x</span>
+                        <button onclick="dashboard.zoomIn()">+</button>
+                    </div>
+                </div>
+                <div style="height: 400px; position: relative; overflow-x: auto;">
+                    <canvas id="minuteHeatmap" height="400"></canvas>
+                </div>
+                <div class="heatmap-legend">
+                    <span>0 шт/мин</span>
+                    <div class="gradient-bar"></div>
+                    <span id="max-power-label">50+ шт/мин</span>
+                    <div class="current-time">Текущее время: <span id="current-time">--:--</span></div>
+                </div>
+            </div>
+
+            <!-- OEE Gauge and Downtime -->
+            <div class="chart-container">
+                <h3>Состояние системы</h3>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="oeeGauge"></canvas>
+                </div>
+                <div id="downtime-alert" style="display: none;">
+                    <div class="downtime-alert">
+                        ⚠️ Обнаружен простой оборудования
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="last-update" id="last-update">
+            Последнее обновление: --
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>
