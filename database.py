@@ -426,15 +426,44 @@ class Database:
             conn.close()
             
             # Группируем по дням
-            history = {}
-            for date, hour, power in rows:
-                if date not in history:
-                    history[date] = [0] * 24
-                if 0 <= hour < 24:
-                    history[date][hour] = float(power) if power else 0
+     def save_minute_power(self, hour, minute, power_value):
+        """Сохранение поминутной мощности"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
             
-            return history
+            today = datetime.now().date().isoformat()
+            
+            # Проверяем, есть ли уже запись за эту минуту сегодня
+            cursor.execute('''
+                SELECT id FROM minute_power 
+                WHERE date = ? AND hour = ? AND minute = ?
+            ''', (today, hour, minute))
+            
+            existing_record = cursor.fetchone()
+            
+            if existing_record:
+                # Обновляем существующую запись, если новая мощность больше
+                cursor.execute('''
+                    UPDATE minute_power 
+                    SET power_value = MAX(power_value, ?), timestamp = CURRENT_TIMESTAMP
+                    WHERE date = ? AND hour = ? AND minute = ?
+                ''', (power_value, today, hour, minute))
+            else:
+                # Вставляем новую запись
+                cursor.execute('''
+                    INSERT INTO minute_power (date, hour, minute, power_value)
+                    VALUES (?, ?, ?, ?)
+                ''', (today, hour, minute, power_value))
+            
+            conn.commit()
+            conn.close()
+            return True
         except Exception as e:
+            print(f"❌ Ошибка сохранения поминутной мощности: {e}")
+            return False
+
+    def get_today_minute_power(self):as e:
             print(f"❌ Ошибка получения истории почасовой мощности: {e}")
             return {}   
 
@@ -532,25 +561,10 @@ class Database:
             
             cursor.execute('''
                 SELECT hour, power_value 
-                FROM hourly_power 
-                WHERE date = ? 
-                ORDER BY hour
-            ''', (target_date,))
-            
-            rows = cursor.fetchall()
-            conn.close()
-            
-            # Создаем массив на 24 часа с нулевыми значениями
-            hourly_data = [0] * 24
-            for hour, power in rows:
-                if 0 <= hour < 24:
-                    hourly_data[hour] = float(power) if power else 0
-            
-            return hourly_data
+                FROM hourly_p            return hourly_data
         except Exception as e:
             print(f"❌ Ошибка получения почасовой мощности за {target_date}: {e}")
-            return [0] * 24ив 24×60 с нулевыми значениями
-            minute_data = [[0] * 60 for _ in range(24)]
+            return [0] * 24     minute_data = [[0] * 60 for _ in range(24)]
             
             for hour, minute, power in rows:
                 if 0 <= hour < 24 and 0 <= minute < 60:

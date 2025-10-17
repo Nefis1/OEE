@@ -294,7 +294,11 @@ class OEEDashboard {    constructor() {
             // Показываем 8 часов вокруг текущего времени
             startHour = Math.max(0, currentHour - 4);
             endHour = Math.min(totalHours, currentHour + 4);
-            this.visibl    scrollToCurrentHour() {
+            this.visibleHours = endHour - startHour;
+        }
+    }
+
+    scrollToCurrentHour() {
         const chartWrapper = document.querySelector('.chart-wrapper');
         if (chartWrapper) {
             if (this.selectedDate === 'today') {
@@ -388,19 +392,8 @@ class OEEDashboard {    constructor() {
                 this.minuteHeatmap.data.datasets[minute].data = minuteData;
                 this.minuteHeatmap.data.datasets[minute].backgroundColor =
                     this.getMinuteColors(minuteData, currentHour, minute, currentMinute);
-            }
-        }
-
-        const maxPower = this.getMaxPower();
-        this.minuteHeatmap.options.scales.y.suggestedMax = Math.max(maxPower * 1.1, 20);
-        this.updatePowerLegend(maxPower);
-        this.updateCurrentTime();
-
-        this.minuteHeatmap.update('active');
-    }     }
-        }
-
-        const maxPower = this.getMaxPower();
+          this.minuteHeatmap.update('active');
+    } this.getMaxPower();
         this.minuteHeatmap.options.scales.y.suggestedMax = Math.max(maxPower * 1.1, 20);
         this.updatePowerLegend(maxPower);
         this.updateCurrentTime();
@@ -432,15 +425,7 @@ class OEEDashboard {    constructor() {
                 opacity = 0.7;
             }
 
-            return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${opacity})`;
-        });
-    }
-
-    getMaxPower() {
-        let max = 0;
-        for (let hour = 0; hour < 24; hour++) {
-            for (let minute = 0; minute < 60; minute++) {
-                max = Math.max(max, this.minuteData[hour]?.[minute] || 0);    updateCurrentTime() {
+            return `rgba(${color[0]}, ${color[1]}, ${c    updateCurrentTime() {
         const currentTimeEl = document.getElementById('current-time');
         if (currentTimeEl) {
             if (this.selectedDate === 'today') {
@@ -453,7 +438,7 @@ class OEEDashboard {    constructor() {
                 currentTimeEl.textContent = 'Архивные данные';
             }
         }
-    }      const currentTimeEl = document.getElementById('current-time');
+    }ocument.getElementById('current-time');
         if (currentTimeEl) {
             const now = new Date();
             currentTimeEl.textContent = now.toLocaleTimeString('ru-RU', {
