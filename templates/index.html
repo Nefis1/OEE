@@ -289,9 +289,60 @@
             /* Серый - простой */
         }
 
-        /* Анимация для изменения мощности */
-        @keyframes powerPulse {
-            0% {
+        /*        .power-changing {
+            animation: powerPulse 0.5s ease-in-out;
+        }
+
+        /* Стили для селектора даты */
+        .date-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .date-selector label {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .date-selector select {
+            padding: 5px 10px;
+            border: 2px solid var(--light);
+            border-radius: 5px;
+            background: white;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        .date-selector button {
+            padding: 5px 10px;
+            border: 2px solid var(--secondary);
+            border-radius: 5px;
+            background: var(--secondary);
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .date-selector button:hover {
+            background: #2980b9;
+        }
+
+        .zoom-controls button {
+            padding: 5px 10px;
+            margin: 0 2px;
+            border: 2px solid var(--secondary);
+            border-radius: 5px;
+            background: var(--secondary);
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .zoom-controls button:hover {
+            background: #2980b9;
+        }
                 transform: scale(1);
             }
 
@@ -367,20 +418,17 @@
                 <div class="kpi-value" id="shift-value">--</div>
                 <div class="kpi-label" id="shift-time">--:-- - --:--</div>
             </div>
-            <!-- Current Power -->
-            <div class="card">
-                <h3>Текущая мощность</h3>
-                <div class="kpi-value power-value" id="current-power-kpi">-- шт/мин</div>
-                <div class="kpi-label" id="power-status">Стабильная работа</div>
-            </div>
-        </div>
-
-        <!-- Charts and Additional Info -->
-        <div class="charts-row">
-            <!-- Карта суток - поминутные бары -->
+            <!-- Curre            <!-- Карта суток - поминутные бары -->
             <div class="chart-container">
                 <h3>Карта суток - поминутная мощность</h3>
                 <div class="chart-header">
+                    <div class="date-selector">
+                        <label for="date-select">Дата:</label>
+                        <select id="date-select" onchange="dashboard.loadDateData()">
+                            <option value="today">Сегодня</option>
+                        </select>
+                        <button onclick="dashboard.refreshDates()" title="Обновить список дат">🔄</button>
+                    </div>
                     <div class="time-legend">
                         <span>00:00</span>
                         <span>06:00</span>
@@ -392,10 +440,20 @@
                         <button onclick="dashboard.zoomOut()">-</button>
                         <span id="zoom-level">1x</span>
                         <button onclick="dashboard.zoomIn()">+</button>
+                        <button onclick="dashboard.showAllHours()" title="Показать все часы">📅</button>
+                        <button onclick="dashboard.showCurrentShift()" title="Показать текущую смену">🕒</button>
                     </div>
                 </div>
                 <div style="height: 400px; position: relative; overflow-x: auto;">
                     <canvas id="minuteHeatmap" height="400"></canvas>
+                </div>
+                <div class="heatmap-legend">
+                    <span>0 шт/мин</span>
+                    <div class="gradient-bar"></div>
+                    <span id="max-power-label">50+ шт/мин</span>
+                    <div class="current-time">Выбранная дата: <span id="selected-date">--</span></div>
+                </div>
+            </div> height="400"></canvas>
                 </div>
                 <div class="heatmap-legend">
                     <span>0 шт/мин</span>

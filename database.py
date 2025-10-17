@@ -446,20 +446,7 @@ class Database:
             
             today = datetime.now().date().isoformat()
             
-            # Сохраняем поминутные данные
-            cursor.execute('''
-                INSERT OR REPLACE INTO minute_power (date, hour, minute, power_value)
-                VALUES (?, ?, ?, ?)
-            ''', (today, hour, minute, power_value))
-            
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as e:
-            print(f"❌ Ошибка сохранения поминутной мощности: {e}")
-            return False
-
-    def get_today_minute_power(self):
+                def get_today_minute_power(self):
         """Получение поминутной мощности за сегодня"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -478,6 +465,91 @@ class Database:
             conn.close()
             
             # Создаем массив 24×60 с нулевыми значениями
+            minute_data = [[0] * 60 for _ in range(24)]
+            
+            for hour, minute, power in rows:
+                if 0 <= hour < 24 and 0 <= minute < 60:
+                    minute_data[hour][minute] = float(power) if power else 0
+            
+            return minute_data
+        except Exception as e:
+            print(f"❌ Ошибка получения поминутной мощности: {e}")
+            return [[0] * 60 for _ in range(24)]
+
+    def get_minute_power_by_date(self, target_date):
+        """Получение поминутной мощности за конкретную дату"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT hour, minute, power_value 
+                FROM minute_power 
+                WHERE date = ? 
+                ORDER BY hour, minute
+            ''', (target_date,))
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            # Создаем массив 24×60 с нулевыми значениями
+            minute_data = [[0] * 60 for _ in range(24)]
+            
+            for hour, minute, power in rows:
+                if 0 <= hour < 24 and 0 <= minute < 60:
+                    minute_data[hour][minute] = float(power) if power else 0
+            
+            return minute_data
+        except Exception as e:
+            print(f"❌ Ошибка получения поминутной мощности за {target_date}: {e}")
+            return [[0] * 60 for _ in range(24)]
+
+    def get_available_dates(self):
+        """Получение списка доступных дат с данными"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT DISTINCT date 
+                FROM minute_power 
+                ORDER BY date DESC
+            ''')
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            return [row[0] for row in rows]
+        except Exception as e:
+            print(f"❌ Ошибка получения списка дат: {e}")
+            return []
+
+    def get_hourly_power_by_date(self, target_date):
+        """Получение почасовой мощности за конкретную дату"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT hour, power_value 
+                FROM hourly_power 
+                WHERE date = ? 
+                ORDER BY hour
+            ''', (target_date,))
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            # Создаем массив на 24 часа с нулевыми значениями
+            hourly_data = [0] * 24
+            for hour, power in rows:
+                if 0 <= hour < 24:
+                    hourly_data[hour] = float(power) if power else 0
+            
+            return hourly_data
+        except Exception as e:
+            print(f"❌ Ошибка получения почасовой мощности за {target_date}: {e}")
+            return [0] * 24ив 24×60 с нулевыми значениями
             minute_data = [[0] * 60 for _ in range(24)]
             
             for hour, minute, power in rows:

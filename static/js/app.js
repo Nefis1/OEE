@@ -1,6 +1,5 @@
 // static/js/app.js
-class OEEDashboard {
-    constructor() {
+class OEEDashboard {    constructor() {
         this.minuteHeatmap = null;
         this.oeeGauge = null;
         this.minuteData = this.createEmptyMinuteData();
@@ -10,28 +9,113 @@ class OEEDashboard {
         this.zoomLevel = 1;
         this.visibleHours = 24; // Показывать все 24 часа по умолчанию
         this.currentView = 'all'; // 'all' или 'shift'
+        this.selectedDate = 'today'; // Выбранная дата
+        this.availableDates = []; // Доступные даты
 
         this.initCharts();
+        this.loadAvailableDates();
         this.loadHistoricalData();
         this.startAutoUpdate();
         this.setupScrollHint();
+    }ollHint();
     }
 
     createEmptyMinuteData() {
         return Array.from({ length: 24 }, () => new Array(60).fill(0));
+     async loadAvailableDates() {
+        try {
+            const response = await fetch('/api/available_dates');
+            const data = await response.json();
+
+            if (data.dates) {
+                this.availableDates = data.dates;
+                this.updateDateSelector();
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки списка дат:', error);
+        }
+    }
+
+    updateDateSelector() {
+        const dateSelect = document.getElementById('date-select');
+        if (!dateSelect) return;
+
+        // Очищаем существующие опции
+        dateSelect.innerHTML = '';
+
+        // Добавляем опцию "Сегодня"
+        const todayOption = document.createElement('option');
+        todayOption.value = 'today';
+        todayOption.textContent = 'Сегодня';
+        dateSelect.appendChild(todayOption);
+
+        // Добавляем доступные даты
+        this.availableDates.forEach(date => {
+            const option = document.createElement('option');
+            option.value = date;
+            const dateObj = new Date(date);
+            option.textContent = dateObj.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                weekday: 'short'
+            });
+            dateSelect.appendChild(option);
+        });
+
+        // Устанавливаем текущую выбранную дату
+        dateSelect.value = this.selectedDate;
     }
 
     async loadHistoricalData() {
         try {
-            const response = await fetch('/api/minute_power');
+            let response;
+            if (this.selectedDate === 'today') {
+                response = await fetch('/api/minute_power');
+            } else {
+                response = await fetch(`/api/minute_power/${this.selectedDate}`);
+            }
+            
             const data = await response.json();
 
             if (data.minute_power) {
                 this.minuteData = data.minute_power;
                 this.updateMinuteHeatmap();
+                this.updateSelectedDateDisplay();
             }
         } catch (error) {
             console.error('Ошибка загрузки исторических данных:', error);
+        }
+    }
+
+    async loadDateData() {
+        const dateSelect = document.getElementById('date-select');
+        if (dateSelect) {
+            this.selectedDate = dateSelect.value;
+            await this.loadHistoricalData();
+        }
+    }
+
+    async refreshDates() {
+        await this.loadAvailableDates();
+    }
+
+    updateSelectedDateDisplay() {
+        const selectedDateEl = document.getElementById('selected-date');
+        if (selectedDateEl) {
+            if (this.selectedDate === 'today') {
+                selectedDateEl.textContent = 'Сегодня';
+            } else {
+                const dateObj = new Date(this.selectedDate);
+                selectedDateEl.textContent = dateObj.toLocaleDateString('ru-RU', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    weekday: 'long'
+                });
+            }
+        }
+    });
         }
     }
 
@@ -210,22 +294,28 @@ class OEEDashboard {
             // Показываем 8 часов вокруг текущего времени
             startHour = Math.max(0, currentHour - 4);
             endHour = Math.min(totalHours, currentHour + 4);
-            this.visibleHours = endHour - startHour;
-        } else {
-            this.visibleHours = totalHours;
-        }
-
-        // Прокручиваем к текущему часу
-        this.scrollToCurrentHour();
-    }
-
-    scrollToCurrentHour() {
+            this.visibl    scrollToCurrentHour() {
         const chartWrapper = document.querySelector('.chart-wrapper');
         if (chartWrapper) {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const hourWidth = (2400 * this.zoomLevel) / 24;
-            const scrollPosition = Math.max(0, (currentHour * hourWidth) - (chartWrapper.clientWidth / 2));
+            if (this.selectedDate === 'today') {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const hourWidth = (2400 * this.zoomLevel) / 24;
+                const scrollPosition = Math.max(0, (currentHour * hourWidth) - (chartWrapper.clientWidth / 2));
+
+                chartWrapper.scrollTo({
+                    left: scrollPosition,
+                    behavior: 'smooth'
+                });
+            } else {
+                // Для архивных данных прокручиваем к началу
+                chartWrapper.scrollTo({
+                    left: 0,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }urrentHour * hourWidth) - (chartWrapper.clientWidth / 2));
 
             chartWrapper.scrollTo({
                 left: scrollPosition,
@@ -274,24 +364,18 @@ class OEEDashboard {
 
         // Прокручиваем к началу
         const chartWrapper = document.querySelector('.chart-wrapper');
-        if (chartWrapper) {
-            chartWrapper.scrollTo({ left: 0, behavior: 'smooth' });
-        }
-    }
-
-    showCurrentShift() {
-        this.currentView = 'shift';
-        this.zoomLevel = 2;
-        this.updateZoomDisplay();
-        this.updateChartSize();
-    }
-
-    updateMinuteHeatmap() {
+        if (chartWrapper)     updateMinuteHeatmap() {
         if (!this.minuteHeatmap) return;
 
         const currentTime = new Date();
-        const currentHour = currentTime.getHours();
-        const currentMinute = currentTime.getMinutes();
+        let currentHour = currentTime.getHours();
+        let currentMinute = currentTime.getMinutes();
+
+        // Для архивных данных не подсвечиваем текущее время
+        if (this.selectedDate !== 'today') {
+            currentHour = -1;
+            currentMinute = -1;
+        }
 
         // Обновляем данные для каждой минуты
         for (let minute = 0; minute < 60; minute++) {
@@ -305,6 +389,15 @@ class OEEDashboard {
                 this.minuteHeatmap.data.datasets[minute].backgroundColor =
                     this.getMinuteColors(minuteData, currentHour, minute, currentMinute);
             }
+        }
+
+        const maxPower = this.getMaxPower();
+        this.minuteHeatmap.options.scales.y.suggestedMax = Math.max(maxPower * 1.1, 20);
+        this.updatePowerLegend(maxPower);
+        this.updateCurrentTime();
+
+        this.minuteHeatmap.update('active');
+    }     }
         }
 
         const maxPower = this.getMaxPower();
@@ -347,21 +440,20 @@ class OEEDashboard {
         let max = 0;
         for (let hour = 0; hour < 24; hour++) {
             for (let minute = 0; minute < 60; minute++) {
-                max = Math.max(max, this.minuteData[hour]?.[minute] || 0);
+                max = Math.max(max, this.minuteData[hour]?.[minute] || 0);    updateCurrentTime() {
+        const currentTimeEl = document.getElementById('current-time');
+        if (currentTimeEl) {
+            if (this.selectedDate === 'today') {
+                const now = new Date();
+                currentTimeEl.textContent = now.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } else {
+                currentTimeEl.textContent = 'Архивные данные';
             }
         }
-        return Math.max(max, 1);
-    }
-
-    updatePowerLegend(maxPower) {
-        const maxPowerLabel = document.getElementById('max-power-label');
-        if (maxPowerLabel) {
-            maxPowerLabel.textContent = `${Math.ceil(maxPower)}+ шт/мин`;
-        }
-    }
-
-    updateCurrentTime() {
-        const currentTimeEl = document.getElementById('current-time');
+    }      const currentTimeEl = document.getElementById('current-time');
         if (currentTimeEl) {
             const now = new Date();
             currentTimeEl.textContent = now.toLocaleTimeString('ru-RU', {
