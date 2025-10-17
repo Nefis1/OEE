@@ -446,7 +446,20 @@ class Database:
             
             today = datetime.now().date().isoformat()
             
-                def get_today_minute_power(self):
+            # Сохраняем поминутные данные
+            cursor.execute('''
+                INSERT OR REPLACE INTO minute_power (date, hour, minute, power_value)
+                VALUES (?, ?, ?, ?)
+            ''', (today, hour, minute, power_value))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"❌ Ошибка сохранения поминутной мощности: {e}")
+            return False
+
+    def get_today_minute_power(self):
         """Получение поминутной мощности за сегодня"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -549,14 +562,4 @@ class Database:
             return hourly_data
         except Exception as e:
             print(f"❌ Ошибка получения почасовой мощности за {target_date}: {e}")
-            return [0] * 24ив 24×60 с нулевыми значениями
-            minute_data = [[0] * 60 for _ in range(24)]
-            
-            for hour, minute, power in rows:
-                if 0 <= hour < 24 and 0 <= minute < 60:
-                    minute_data[hour][minute] = float(power) if power else 0
-            
-            return minute_data
-        except Exception as e:
-            print(f"❌ Ошибка получения поминутной мощности: {e}")
-            return [[0] * 60 for _ in range(24)]            
+            return [0] * 24

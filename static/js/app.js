@@ -1,5 +1,6 @@
 // static/js/app.js
-class OEEDashboard {    constructor() {
+class OEEDashboard {
+    constructor() {
         this.minuteHeatmap = null;
         this.oeeGauge = null;
         this.minuteData = this.createEmptyMinuteData();
@@ -17,12 +18,13 @@ class OEEDashboard {    constructor() {
         this.loadHistoricalData();
         this.startAutoUpdate();
         this.setupScrollHint();
-    }ollHint();
     }
 
     createEmptyMinuteData() {
         return Array.from({ length: 24 }, () => new Array(60).fill(0));
-     async loadAvailableDates() {
+    }
+
+    async loadAvailableDates() {
         try {
             const response = await fetch('/api/available_dates');
             const data = await response.json();
@@ -115,8 +117,6 @@ class OEEDashboard {    constructor() {
                 });
             }
         }
-    });
-        }
     }
 
     initCharts() {
@@ -173,7 +173,7 @@ class OEEDashboard {    constructor() {
                                 afterLabel: (context) => {
                                     const hour = context.dataIndex;
                                     const currentHour = new Date().getHours();
-                                    if (hour === currentHour) {
+                                    if (hour === currentHour && this.selectedDate === 'today') {
                                         return '🕒 Текущий час';
                                     }
                                     return null;
@@ -231,7 +231,7 @@ class OEEDashboard {    constructor() {
             this.updateChartSize();
         }
 
-        // OEE Gauge (оставляем как было)
+        // OEE Gauge
         const gaugeCtx = document.getElementById('oeeGauge');
         if (gaugeCtx) {
             this.oeeGauge = new Chart(gaugeCtx, {
@@ -288,13 +288,22 @@ class OEEDashboard {    constructor() {
         let startHour = 0;
         let endHour = totalHours;
 
-        if (this.currentView === 'shift') {
+        if (this.currentView === 'shift' && this.selectedDate === 'today') {
             const now = new Date();
             const currentHour = now.getHours();
             // Показываем 8 часов вокруг текущего времени
             startHour = Math.max(0, currentHour - 4);
             endHour = Math.min(totalHours, currentHour + 4);
-            this.visibl    scrollToCurrentHour() {
+            this.visibleHours = endHour - startHour;
+        } else {
+            this.visibleHours = totalHours;
+        }
+
+        // Прокручиваем к текущему часу
+        this.scrollToCurrentHour();
+    }
+
+    scrollToCurrentHour() {
         const chartWrapper = document.querySelector('.chart-wrapper');
         if (chartWrapper) {
             if (this.selectedDate === 'today') {
@@ -314,13 +323,6 @@ class OEEDashboard {    constructor() {
                     behavior: 'smooth'
                 });
             }
-        }
-    }urrentHour * hourWidth) - (chartWrapper.clientWidth / 2));
-
-            chartWrapper.scrollTo({
-                left: scrollPosition,
-                behavior: 'smooth'
-            });
         }
     }
 
@@ -364,7 +366,24 @@ class OEEDashboard {    constructor() {
 
         // Прокручиваем к началу
         const chartWrapper = document.querySelector('.chart-wrapper');
-        if (chartWrapper)     updateMinuteHeatmap() {
+        if (chartWrapper) {
+            chartWrapper.scrollTo({ left: 0, behavior: 'smooth' });
+        }
+    }
+
+    showCurrentShift() {
+        this.currentView = 'shift';
+        this.zoomLevel = 2;
+        this.updateZoomDisplay();
+        this.updateChartSize();
+        
+        // Для архивных данных не показываем текущую смену
+        if (this.selectedDate !== 'today') {
+            this.showAllHours();
+        }
+    }
+
+    updateMinuteHeatmap() {
         if (!this.minuteHeatmap) return;
 
         const currentTime = new Date();
@@ -389,15 +408,6 @@ class OEEDashboard {    constructor() {
                 this.minuteHeatmap.data.datasets[minute].backgroundColor =
                     this.getMinuteColors(minuteData, currentHour, minute, currentMinute);
             }
-        }
-
-        const maxPower = this.getMaxPower();
-        this.minuteHeatmap.options.scales.y.suggestedMax = Math.max(maxPower * 1.1, 20);
-        this.updatePowerLegend(maxPower);
-        this.updateCurrentTime();
-
-        this.minuteHeatmap.update('active');
-    }     }
         }
 
         const maxPower = this.getMaxPower();
@@ -440,7 +450,20 @@ class OEEDashboard {    constructor() {
         let max = 0;
         for (let hour = 0; hour < 24; hour++) {
             for (let minute = 0; minute < 60; minute++) {
-                max = Math.max(max, this.minuteData[hour]?.[minute] || 0);    updateCurrentTime() {
+                max = Math.max(max, this.minuteData[hour]?.[minute] || 0);
+            }
+        }
+        return Math.max(max, 1);
+    }
+
+    updatePowerLegend(maxPower) {
+        const maxPowerLabel = document.getElementById('max-power-label');
+        if (maxPowerLabel) {
+            maxPowerLabel.textContent = `${Math.ceil(maxPower)}+ шт/мин`;
+        }
+    }
+
+    updateCurrentTime() {
         const currentTimeEl = document.getElementById('current-time');
         if (currentTimeEl) {
             if (this.selectedDate === 'today') {
@@ -453,18 +476,7 @@ class OEEDashboard {    constructor() {
                 currentTimeEl.textContent = 'Архивные данные';
             }
         }
-    }      const currentTimeEl = document.getElementById('current-time');
-        if (currentTimeEl) {
-            const now = new Date();
-            currentTimeEl.textContent = now.toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
     }
-
-    // ... остальные методы (updateDashboard, updateKPIs, updatePowerKPI и т.д.) остаются без изменений ...
-    // ВАЖНО: Сохраните все остальные методы из предыдущей версии без изменений
 
     async updateDashboard() {
         try {

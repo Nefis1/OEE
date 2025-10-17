@@ -287,7 +287,20 @@ def test_data():
             'availability': 85.0,
             'performance': 92.1,
             'quality': 98.0
-  @app.route('/api/minute_power')
+        },
+        'downtime_status': {
+            'is_downtime': False,
+            'info': None
+        },
+        'shift_info': {
+            'number': 1,
+            'start': '07:00:00',
+            'end': '19:00:00'
+        },
+        'last_update': datetime.now().isoformat()
+    })
+
+@app.route('/api/minute_power')
 def get_minute_power():
     """API для получения поминутной мощности за сегодня"""
     try:
@@ -358,15 +371,6 @@ def get_hourly_power_by_date(date):
             'hourly_power': [0] * 24,
             'date': date,
             'current_hour': 0
-        })our,
-            'current_minute': current_time.minute
-        })
-    except Exception as e:
-        print(f"Ошибка получения поминутной мощности: {e}")
-        return jsonify({
-            'minute_power': [[0] * 60 for _ in range(24)],
-            'current_hour': 0,
-            'current_minute': 0
         })
 
 if __name__ == '__main__':
